@@ -1,6 +1,6 @@
 from .beatmap_classes import *
 from .storyboard_classes import *
-from ..globals import OSU_FOLDER_PATH
+from ..globals import osu_fp
 from my_tools import split_get, complete_path, ListWithIndentation
 
 
@@ -48,7 +48,7 @@ def get_commands(command):
 
 
 def decompress_beatmap(path):
-    path = complete_path(path, root=OSU_FOLDER_PATH, folder="Songs\\", extension=".osu")  # Be sure the path is correct
+    path = complete_path(path, root=osu_fp.get(), folder="Songs\\", extension=".osu")  # Be sure the path is correct
     with open(path, "r", encoding="utf-8") as file:
         lines = (i[:-1] for i in file.readlines())
 

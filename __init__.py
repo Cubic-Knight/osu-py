@@ -1,7 +1,7 @@
 from .beatmap import *
 from .replay import *
 from .tools import *
-from .globals import OSU_FOLDER_PATH
+from .globals import osu_fp
 
 __all__ = [
     'Settings', 'GeneralSettings', 'EditorSettings', 'MetadataSettings', 'DifficultySettings', 'ColorSettings',
@@ -24,5 +24,6 @@ __all__ = [
 
     'M1', 'M2', 'K1', 'K2', 'SMOKE',
     'PLAYFIELD_CENTER',
-    'OSU_FOLDER_PATH'
+
+    'osu_fp'
 ]
