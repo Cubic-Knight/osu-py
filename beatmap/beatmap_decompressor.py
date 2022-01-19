@@ -1,6 +1,6 @@
 from .beatmap_classes import *
 from .storyboard_classes import *
-from ..globals import osu_fp
+from ..helpers.paths import osu_fp
 from my_tools import split_get, complete_path, ListWithIndentation
 
 
