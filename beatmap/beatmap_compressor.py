@@ -1,7 +1,7 @@
 from my_tools import complete_path
 from .beatmap_classes import *
 from .storyboard_classes import *
-from ..globals import osu_fp
+from ..helpers.paths import osu_fp
 
 
 def format_sprite_command(cmd):
