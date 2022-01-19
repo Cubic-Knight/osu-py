@@ -27,4 +27,9 @@ class OsuFolderPath:
 osu_fp = OsuFolderPath()
 
 
-def 
+def complete_path(path, root, folder="", ext=None) -> str:
+    if ":" not in path:  # Relative import
+        path = join(root, folder, path)
+    if ext is not None and not path.endswith(ext):
+        path += ext
+    return path
