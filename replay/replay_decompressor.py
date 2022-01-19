@@ -2,7 +2,7 @@ import lzma
 import struct
 from .replay_classes import *
 from my_tools import complete_path
-from ..globals import osu_fp
+from ..helpers.paths import osu_fp
 
 file_bytes = []  # This var is global because it is used in all functions
 

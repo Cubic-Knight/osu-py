@@ -2,7 +2,7 @@ import lzma
 import struct
 import hashlib
 from .replay_classes import *
-from ..globals import osu_fp
+from ..helpers.paths import osu_fp
 from my_tools import complete_path
 
 TYPE_LENGTH = {

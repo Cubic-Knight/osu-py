@@ -1,4 +1,5 @@
 from .beatmap import *
+from .helpers import osu_fp
 from .replay import *
 from .tools import *
 
@@ -22,5 +23,7 @@ __all__ = [
     'cs_to_radius', 'radius_to_cs',
 
     'M1', 'M2', 'K1', 'K2', 'SMOKE',
-    'PLAYFIELD_CENTER'
+    'PLAYFIELD_CENTER',
+
+    'osu_fp'
 ]
