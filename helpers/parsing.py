@@ -41,6 +41,7 @@ def split_get(s: str, sep: str, obj_funcs: list, defaults: list = None,
     # Convert every non-tuple function to a 1-tuple containing that function
     obj_funcs = [(f,) if not isinstance(f, tuple) else f for f in obj_funcs]
     # Extend obj_funcs and default so they match the length of args (too much is not a problem but too few is)
+    if defaults is None: defaults = []
     obj_funcs.extend( (str,) for i in range(len(args)-len(obj_funcs)) )
     defaults.extend( ... for i in range(len(args)-len(defaults)) )
     res = [apply_first_correct_function(arg, funcs, default) for arg, funcs, default in zip(args, obj_funcs, defaults)]
