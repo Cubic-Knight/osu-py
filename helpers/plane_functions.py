@@ -1,4 +1,4 @@
-from .vector import Vector
+from .plane_classes import Vector
 
 def segment_fraction(fraction: float, p1: Vector, p2: Vector) -> Vector:
     return (p2-p1)*fraction + p1
