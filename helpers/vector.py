@@ -1,4 +1,5 @@
 from itertools import zip_longest
+from typing import Tuple
 
 class Vector(tuple):
     def __new__(cls, *args):
@@ -38,3 +39,24 @@ class Vector(tuple):
     def __rmul__(self, other): return self * other
     def __imul__(self, other): return self * other
     def __itruediv__(self, other): return self / other
+
+
+class CartesianLine:
+    def __init__(self, a: float = None, b: float = None, c: float = None):
+        self.a = a
+        self.b = b
+        self.c = c
+
+    @classmethod
+    def from_two_points(cls, p1: Tuple[float, float] = None, p2: Tuple[float, float] = None):
+        a = p2[1] - p1[1]
+        b = p1[0] - p2[0]
+        c = -a*p1[0] - b*p1[1]
+        return cls(a, b, c)
+
+    def intersection_point(self, other):
+        if not isinstance(other, CartesianLine):
+            return NotImplemented
+        x = (self.b * other.c - other.b * self.c) / (self.a * other.b - other.a * self.b)
+        y = (self.c * other.a - other.c * self.a) / (self.a * other.b - other.a * self.b)
+        return Vector(x, y)
