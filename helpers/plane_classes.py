@@ -1,5 +1,6 @@
 from itertools import zip_longest
 from typing import Tuple
+from math import isclose
 
 class Vector(tuple):
     def __new__(cls, *args):
@@ -42,21 +43,32 @@ class Vector(tuple):
 
 
 class CartesianLine:
-    def __init__(self, a: float = None, b: float = None, c: float = None):
+    def __init__(self, a: float, b: float, c: float):
         self.a = a
         self.b = b
         self.c = c
 
     @classmethod
-    def from_two_points(cls, p1: Tuple[float, float] = None, p2: Tuple[float, float] = None):
+    def from_two_points(cls, p1: Tuple[float, float], p2: Tuple[float, float]):
         a = p2[1] - p1[1]
         b = p1[0] - p2[0]
         c = -a*p1[0] - b*p1[1]
         return cls(a, b, c)
 
+    @classmethod
+    def as_perp_bis_of_two_points(cls, p1: Vector, p2: Vector):
+        x, y = (p1+p2) / 2  # Compute position of the point in the middle of p1 and p2
+        a, b = p2 - p1
+        c = -a*x - b*y
+        return cls(a, b, c)
+
+    def is_parallel_with(self, other):
+        if not isinstance(other, CartesianLine): return NotImplemented
+        return isclose(self.a * other.b, other.a * self.b)
+
     def intersection_point(self, other):
-        if not isinstance(other, CartesianLine):
-            return NotImplemented
+        if not isinstance(other, CartesianLine):  return NotImplemented
+        if self.is_parallel_with(other): return None
         x = (self.b * other.c - other.b * self.c) / (self.a * other.b - other.a * self.b)
         y = (self.c * other.a - other.c * self.a) / (self.a * other.b - other.a * self.b)
         return Vector(x, y)
