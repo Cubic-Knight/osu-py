@@ -1,7 +1,6 @@
-from my_tools import complete_path
 from .beatmap_classes import *
 from .storyboard_classes import *
-from ..helpers.paths import osu_fp
+from ..helpers import osu_fp, complete_path
 
 
 def format_sprite_command(cmd):
@@ -52,6 +51,6 @@ def compress_beatmap(beatmap: Beatmap, output_path=None):
         return beatmap_str
 
     # Create the file
-    output_path = complete_path(output_path, root=osu_fp.get(), folder="Songs\\", extension=".osu")
+    output_path = complete_path(output_path, root=osu_fp.get(), folder="Songs\\", ext=".osu")
     with open(output_path, 'w', encoding="utf-8") as output_file:
         output_file.write(beatmap_str)

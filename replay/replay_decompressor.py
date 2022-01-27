@@ -1,8 +1,7 @@
 import lzma
 import struct
 from .replay_classes import *
-from my_tools import complete_path
-from ..helpers.paths import osu_fp
+from ..helpers import osu_fp, complete_path
 
 file_bytes = []  # This var is global because it is used in all functions
 
@@ -62,7 +61,7 @@ def decompress_replay(path):
     """
     global file_bytes
 
-    path = complete_path(path, root=osu_fp.get(), folder="Replays\\", extension=".osr")
+    path = complete_path(path, root=osu_fp.get(), folder="Replays\\", ext=".osr")
     with open(path, 'rb') as file:
         file_bytes = [i for i in file.read()]
 

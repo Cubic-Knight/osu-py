@@ -2,8 +2,7 @@ import lzma
 import struct
 import hashlib
 from .replay_classes import *
-from ..helpers.paths import osu_fp
-from my_tools import complete_path
+from ..helpers import osu_fp, complete_path
 
 TYPE_LENGTH = {
         "byte": 1,
@@ -102,6 +101,6 @@ def compress_replay(replay: Replay, output_path=None):
         return compressed_replay
 
     # Create the file
-    output_path = complete_path(output_path, root=osu_fp.get(), folder="Replays\\", extension=".osr")
+    output_path = complete_path(output_path, root=osu_fp.get(), folder="Replays\\", ext=".osr")
     with open(output_path, 'wb') as output_file:
         output_file.write(compressed_replay)

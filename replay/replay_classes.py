@@ -3,9 +3,9 @@ To see what each property does, check the osu!wiki: https://osu.ppy.sh/wiki/cs/o
 """
 
 
-from typing import Union, Dict
+from typing import Union
 from dataclasses import dataclass
-from my_tools import split_get, PrintWithIndentation, ListWithIndentation
+from ..helpers import split_get
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ MODS_INDEX_TO_STR = {
 
 
 @dataclass
-class ReplayFrame(PrintWithIndentation):
+class ReplayFrame:
     time: int
     x: float
     y: float
@@ -94,7 +94,7 @@ class ReplayFrame(PrintWithIndentation):
 
 
 @dataclass
-class Replay(PrintWithIndentation):
+class Replay:
     gameMode: int  # 0: osu!, 1: osu!taiko, 2: osu!catch, 3: osu!mania
     version: int
     beatmapHash: str
@@ -110,7 +110,7 @@ class Replay(PrintWithIndentation):
     maxCombo: int
     fullCombo: int
     mods: Union[int, list[str]]
-    lifeGraph: Union[str, Dict[int, float]]
+    lifeGraph: Union[str, dict[int, float]]
     time: int
     replayLength: Union[str, list[ReplayFrame]]
     replay: Union[str, list[ReplayFrame]]
@@ -119,9 +119,10 @@ class Replay(PrintWithIndentation):
 
     def __post_init__(self):
         if isinstance(self.mods, int):
-            self.mods = ListWithIndentation(
-                mod for index, mod in MODS_INDEX_TO_STR.items() if (self.mods & (1 << index))
-            )
+            self.mods = [
+                mod for index, mod in MODS_INDEX_TO_STR.items()
+                if (self.mods & (1 << index))
+            ]
 
         if self.lifeGraph == "":
             self.lifeGraph = {}
@@ -144,7 +145,7 @@ class Replay(PrintWithIndentation):
                         action=action
                     )
                 )
-            self.replay = ListWithIndentation(replay)
+            self.replay = []
 
     def add_frame(self, time: int, x: float, y: float, action: int = 0):
         frame = ReplayFrame(

@@ -1,6 +1,6 @@
-from math import *
-from ..beatmap.beatmap_classes import *
-from my_tools import *
+from math import dist, floor, sin, cos, atan2
+from ..beatmap.beatmap_classes import Beatmap, Slider, SliderTick
+from ..helpers import Vector, segment_fraction, find_circle_center, angles_are_rotating_clockwise, bezier
 
 
 def analyse_linear_slider(slider: Slider):
@@ -43,7 +43,7 @@ def analyse_perfect_slider(slider: Slider, loop_ms: int):
 
     curve_points_angle = []
     for point in curve_points:
-        curve_points_angle.append(angle(*point, *center))
+        curve_points_angle.append(atan2(*point-center))
 
     rotation_angle = slider.length / radius  # Angle(r) for anti-clockwise rotation
     if angles_are_rotating_clockwise(*curve_points_angle):
@@ -114,7 +114,7 @@ def analyse_bezier_slider(slider: Slider, bezier_precision: int):
 
         return curve_path
 
-    def get_last_point(p1: Dict, p2: Dict, slider_duration: float):
+    def get_last_point(p1: dict, p2: dict, slider_duration: float):
         return {
             "time": slider_duration,
             "pos": segment_fraction(
@@ -195,7 +195,7 @@ def analyse_slider(beatmap: Beatmap, slider: Slider, loop_ms: int, bezier_precis
     time_between_ticks = beatmap.beat_length(slider.time) / beatmap.Difficulty.SliderTickRate
 
     time = time_between_ticks
-    ticks = ListWithIndentation()
+    ticks = []
     while time < slider.additionalData.slideDuration:
         ticks.append(SliderTick(
             time=time,

@@ -1,7 +1,8 @@
 from ..beatmap.beatmap_classes import *
 from .slider_analyser import analyse_slider
 from .conversions import ar_to_ms, cs_to_radius
-from my_tools import dist, Vector
+from math import dist
+from ..helpers import Vector
 
 
 def analyse_beatmap(beatmap: Beatmap, loop_ms: int = 10, bezier_precision: int = 50):

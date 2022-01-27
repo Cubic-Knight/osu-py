@@ -1,11 +1,10 @@
 from .beatmap_classes import *
 from .storyboard_classes import *
-from ..helpers.paths import osu_fp
-from my_tools import split_get, complete_path, ListWithIndentation
+from ..helpers import osu_fp, complete_path, split_get
 
 
 def get_commands(command):
-    cmd, *data = split_get(command, ",", [str, [int, float, str]], def_emp="")
+    cmd, *data = split_get(command, ",", [str, [int, float, str]])
     indent, event = cmd.replace(" ", "_").count("_"), cmd.replace("_", " ").strip()
 
     if event == "L":  # Loop
@@ -48,7 +47,7 @@ def get_commands(command):
 
 
 def decompress_beatmap(path):
-    path = complete_path(path, root=osu_fp.get(), folder="Songs\\", extension=".osu")  # Be sure the path is correct
+    path = complete_path(path, root=osu_fp.get(), folder="Songs\\", ext=".osu")  # Be sure the path is correct
     with open(path, "r", encoding="utf-8") as file:
         lines = (i[:-1] for i in file.readlines())
 
@@ -60,10 +59,10 @@ def decompress_beatmap(path):
     editor = {}
     metadata = {}
     difficulty = {}
-    events = ListWithIndentation()
-    timing_points = ListWithIndentation()
+    events = []
+    timing_points = []
     colors = {}
-    hit_objects = ListWithIndentation()
+    hit_objects = []
 
     section = None
     for line in lines:
@@ -76,19 +75,19 @@ def decompress_beatmap(path):
 
         # Evaluate the line depending on the section
         if section == "[General]":
-            key, value = split_get(line, ":", [str, (int, float, str)], def_emp="")
+            key, value = split_get(line, ":", [str, (int, float, str)])
             general[key] = value
             continue
 
         if section == "[Editor]":
-            key, value = split_get(line, ":", [str, (int, float, str)], def_emp="")
+            key, value = split_get(line, ":", [str, (int, float, str)])
             if key == "Bookmarks":
                 value = split_get(str(value), ",", [[int]])
             editor[key] = value
             continue
 
         if section == "[Metadata]":
-            key, *value = split_get(line, ":", [str, [int, str]], def_emp="")
+            key, *value = split_get(line, ":", [str, [int, str]])
             metadata[key] = ":".join(str(i) for i in value)  # .join is to avoid errors due to ":" in strings
             continue
 
@@ -139,7 +138,7 @@ def decompress_beatmap(path):
             continue
 
         if section == "[HitObjects]":
-            params = split_get(line, ",", [[int, float, str]], def_emp="")
+            params = split_get(line, ",", [[int, float, str]])
             hit_objects.append(
                 get_hit_object_class(params[3])(*params)
             )

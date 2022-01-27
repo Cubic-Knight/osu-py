@@ -5,7 +5,6 @@ To see what each property does, check the osu!wiki: https://osu.ppy.sh/wiki/sk/S
 
 from typing import Union
 from dataclasses import dataclass
-from my_tools import PrintWithIndentation, ListWithIndentation
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -114,7 +113,7 @@ def get_command_class_and_arg_count(command):
 
 
 @dataclass
-class Event(PrintWithIndentation):
+class Event:
     type: Union[int, str]
 
     def __post_init__(self):
@@ -138,7 +137,7 @@ class Image(Event):
 
     def __post_init__(self):
         super().__post_init__()
-        self.commands = ListWithIndentation()
+        self.commands = []
 
     def osu_format(self):
         return f"0,{self.startTime},{self.filename},{self.xOffset},{self.yOffset}"
@@ -153,7 +152,7 @@ class Video(Event):
 
     def __post_init__(self):
         super().__post_init__()
-        self.commands = ListWithIndentation()
+        self.commands = []
 
     def osu_format(self):
         return f"1,{self.startTime},{self.filename},{self.xOffset},{self.yOffset}"
@@ -198,7 +197,7 @@ class Sprite(Event):
         if isinstance(self.origin, int):
             self.origin = EVENT_ORIGIN_INT_TO_STR[self.origin]
 
-        self.commands = ListWithIndentation()
+        self.commands = []
 
     def osu_format(self):
         return f"4,{self.layer},{self.origin},{self.filepath},{self.x},{self.y}"
@@ -238,7 +237,7 @@ class Animation(Event):
         if isinstance(self.origin, int):
             self.origin = EVENT_ORIGIN_INT_TO_STR[self.origin]
 
-        self.commands = ListWithIndentation()
+        self.commands = []
 
     def osu_format(self):
         return (
@@ -254,7 +253,7 @@ class Animation(Event):
 
 
 @dataclass
-class BaseCommand(PrintWithIndentation):
+class BaseCommand:
     indentation: int
     event: str
 
@@ -375,11 +374,11 @@ class Parameter(SpriteCommand):
 class Loop(BaseCommand):
     startTime: int = 0
     loopCount: int = 0
-    loopCommands: Union[list, ListWithIndentation] = None
+    loopCommands: list = None
 
     def __post_init__(self):
         if self.loopCommands is None:
-            self.loopCommands = ListWithIndentation()
+            self.loopCommands = []
 
     def osu_format(self):
         return f"{self.cmd()},{self.startTime},{self.loopCount}"
@@ -390,11 +389,11 @@ class Trigger(BaseCommand):
     triggerType: str
     startTime: int = 0
     endTime: int = 0
-    triggerCommands: Union[list, ListWithIndentation] = None
+    triggerCommands: list = None
 
     def __post_init__(self):
         if self.triggerCommands is None:
-            self.triggerCommands = ListWithIndentation()
+            self.triggerCommands = []
 
     def osu_format(self):
         return f"{self.cmd()},{self.triggerType},{self.startTime},{self.endTime}"

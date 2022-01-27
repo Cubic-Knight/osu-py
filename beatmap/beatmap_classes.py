@@ -4,10 +4,10 @@ To see what each property does, check the osu!wiki: https://osu.ppy.sh/wiki/sk/o
 
 
 import hashlib
-from typing import Tuple, Dict
+from typing import Tuple
 from dataclasses import dataclass
-from my_tools import split_get, PrintWithIndentation, segment_fraction, Vector
 from .storyboard_classes import Event
+from ..helpers import Vector, segment_fraction, split_get
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ class SliderTick:
 
 
 @dataclass
-class SliderAdditionalData(PrintWithIndentation):
+class SliderAdditionalData:
     endX: int = None
     endY: int = None
     endPos: Vector = None
@@ -62,7 +62,7 @@ class SliderAdditionalData(PrintWithIndentation):
     slideDuration: float = None
     duration: float = None
     ticksPos: list[SliderTick] = None
-    path: Dict[int, Vector] = None
+    path: dict[int, Vector] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -72,8 +72,8 @@ class SliderAdditionalData(PrintWithIndentation):
 
 
 @dataclass
-class Settings(PrintWithIndentation):
-    InitDict: Dict = None
+class Settings:
+    InitDict: dict = None
 
     def __post_init__(self):
         if self.InitDict is not None:
@@ -236,7 +236,7 @@ class ColorSettings(Settings):
 
 
 @dataclass
-class HitSample(PrintWithIndentation):
+class HitSample:
     normalSet: int
     additionSet: int
     index: int
@@ -248,7 +248,7 @@ class HitSample(PrintWithIndentation):
 
 
 @dataclass
-class TimingPoint(PrintWithIndentation):
+class TimingPoint:
     time: int
     beatLength: float
     meter: int = 4
@@ -270,7 +270,7 @@ class TimingPoint(PrintWithIndentation):
 
 
 @dataclass
-class HitObject(PrintWithIndentation):
+class HitObject:
     x: int
     y: int
     time: int
@@ -311,7 +311,7 @@ class Circle(HitObject):
         if self.hitSample == "":
             self.hitSample = "0:0:0:0:"
         self.hitSample = HitSample(
-            *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""])
+            *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""], min_len=5)
         )
 
     def osu_format(self):
@@ -345,7 +345,7 @@ class Slider(HitObject):
             self.edgeSets = [ tuple( split_get(i, ":", [int, int]) ) for i in edge_sets]
 
         self.hitSample = HitSample(
-            *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""])
+            *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""], min_len=5)
         )
 
         self.additionalData = SliderAdditionalData()
@@ -386,7 +386,7 @@ class Spinner(HitObject):
     def __post_init__(self):
         super().__post_init__()
         self.hitSample = HitSample(
-            *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""])
+            *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""], min_len=5)
         )
 
     def osu_format(self):
@@ -400,7 +400,7 @@ class Hold(HitObject):
 
     def __post_init__(self):
         super().__post_init__()
-        self.endTime, *sample = split_get(self.params, ":", [int, int, int, int, int, str], [0, 0, 0, 0, 0, ""])
+        self.endTime, *sample = split_get(self.params, ":", [int, int, int, int, int, str], [0, 0, 0, 0, 0, ""], min_len=6)
         self.hitSample = HitSample(*sample)
 
     def osu_format(self):
@@ -414,7 +414,7 @@ class Hold(HitObject):
 
 
 @dataclass
-class Beatmap(PrintWithIndentation):
+class Beatmap:
     FileFormat: int
     General: GeneralSettings
     Editor: EditorSettings
