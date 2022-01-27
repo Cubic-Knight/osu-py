@@ -36,7 +36,7 @@ def split_get(s: str, sep: str, obj_funcs: list, defaults: list = None,
         star = [isinstance(f, list) for f in obj_funcs].index(True)  # Find list
         star_span = len(args) - len(obj_funcs) + 1  # Find how many functions should be added to match the length of args
         obj_funcs = obj_funcs[:star] + [tuple(obj_funcs[star])]*star_span + obj_funcs[star+1:]
-    except TypeError:
+    except ValueError:
         pass
     # Convert every non-tuple function to a 1-tuple containing that function
     obj_funcs = [(f,) if not isinstance(f, tuple) else f for f in obj_funcs]
