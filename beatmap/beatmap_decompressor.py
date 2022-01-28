@@ -3,7 +3,7 @@ from .storyboard_classes import *
 from ..helpers import osu_fp, complete_path, split_get
 
 
-def get_commands(command):
+def get_commands(command: str) -> list[BaseCommand]:
     cmd, *data = split_get(command, ",", [str, [int, float, str]])
     indent, event = cmd.replace(" ", "_").count("_"), cmd.replace("_", " ").strip()
 
@@ -42,11 +42,12 @@ def get_commands(command):
             easing,
             start_time + i*duration,
             end_time + i*duration,
-            *p) for i, p in enumerate(organised_params)
+            *p)
+        for i, p in enumerate(organised_params)
     ]
 
 
-def decompress_beatmap(path):
+def decompress_beatmap(path: str) -> Beatmap:
     path = complete_path(path, root=osu_fp.get(), folder="Songs\\", ext=".osu")  # Be sure the path is correct
     with open(path, "r", encoding="utf-8") as file:
         lines = (i[:-1] for i in file.readlines())
@@ -148,13 +149,13 @@ def decompress_beatmap(path):
 
     return Beatmap(
         FileFormat=file_format,
-        General=GeneralSettings(general),
-        Editor=EditorSettings(editor),
-        Metadata=MetadataSettings(metadata),
-        Difficulty=DifficultySettings(difficulty),
+        General=GeneralSettings.from_dict(general),
+        Editor=EditorSettings.from_dict(editor),
+        Metadata=MetadataSettings.from_dict(metadata),
+        Difficulty=DifficultySettings.from_dict(difficulty),
         Events=events,
         TimingPoints=timing_points,
-        Colors=ColorSettings(colors),
+        Colors=ColorSettings.from_dict(colors),
         HitObjects=hit_objects,
         Path=path
     )

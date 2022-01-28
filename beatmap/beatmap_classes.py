@@ -4,7 +4,7 @@ To see what each property does, check the osu!wiki: https://osu.ppy.sh/wiki/sk/o
 
 
 import hashlib
-from typing import Tuple
+from typing import Tuple, Union
 from dataclasses import dataclass
 from .storyboard_classes import Event
 from ..helpers import Vector, segment_fraction, split_get
@@ -15,7 +15,7 @@ from ..helpers import Vector, segment_fraction, split_get
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def get_hit_object_type_str(obj_type):
+def get_hit_object_type_str(obj_type: int) -> str:
     if obj_type & 0b_0000_0001:
         return "circle"
     if obj_type & 0b_0000_0010:
@@ -28,7 +28,7 @@ def get_hit_object_type_str(obj_type):
     return "unknown"
 
 
-def get_hit_object_class(obj_type):
+def get_hit_object_class(obj_type: int) -> type:
     obj_type = get_hit_object_type_str(obj_type)
     if obj_type == "circle":
         return Circle
@@ -71,15 +71,13 @@ class SliderAdditionalData:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
 class Settings:
-    InitDict: dict = None
-
-    def __post_init__(self):
-        if self.InitDict is not None:
-            for key in self.InitDict:
-                setattr(self, key, self.InitDict[key])
-        del self.InitDict
+    @classmethod
+    def from_dict(cls, d: dict):
+        self = cls()
+        for key, value in d.items():
+            setattr(self, key, value)
+        return self
 
 
 @dataclass
@@ -104,7 +102,7 @@ class GeneralSettings(Settings):
     WidescreenStoryboard: bool = 0
     SamplesMatchPlaybackRate: bool = 0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             "[General]\n" +
             "\n".join(
@@ -123,11 +121,10 @@ class EditorSettings(Settings):
     TimelineZoom: float = 1.0
 
     def __post_init__(self):
-        super().__post_init__()
         if self.Bookmarks is None:
             self.Bookmarks = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             "[Editor]\n" +
             f"Bookmarks: {','.join( str(i) for i in self.Bookmarks )}\n" +
@@ -152,10 +149,9 @@ class MetadataSettings(Settings):
     BeatmapSetID: int = 0
 
     def __post_init__(self):
-        super().__post_init__()
         self.Tags = [tag for tag in self.Tags.split(" ")]
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             "[Metadata]\n" +
             f"Tags: {' '.join( str(i) for i in self.Tags )}\n" +
@@ -176,8 +172,6 @@ class DifficultySettings(Settings):
     SliderTickRate: float = 1.0
 
     def __post_init__(self):
-        super().__post_init__()
-
         if self.OverallDifficulty is None:
             raise BeatmapError("Beatmap has no OD set")
         if self.HPDrainRate is None:
@@ -187,7 +181,7 @@ class DifficultySettings(Settings):
         if self.ApproachRate is None:
             self.ApproachRate = self.OverallDifficulty
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             "[Difficulty]\n" +
             "\n".join(
@@ -211,15 +205,12 @@ class ColorSettings(Settings):
     SliderBorder: Tuple[int, int, int] = None
 
     def __post_init__(self):
-        super().__post_init__()
+        self.ComboColors = [
+            color for i in range(1, 9)
+            if (color := getattr(self, f"Combo{i}", None)) is not None
+        ]
 
-        self.ComboColors = []
-        for i in range(1, 9):
-            color = getattr(self, f"Combo{i}")
-            if color is not None:
-                self.ComboColors.append(color)
-
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             "[Colours]\n" +
             "\n".join(
@@ -243,7 +234,7 @@ class HitSample:
     volume: int
     filename: str
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.normalSet}:{self.additionSet}:{self.index}:{self.volume}:{self.filename}"
 
 
@@ -262,7 +253,7 @@ class TimingPoint:
         self.time = int(self.time)
         self.uninherited = int(self.beatLength > 0)
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             f"{self.time},{self.beatLength},{self.meter},{self.sampleSet},{self.sampleIndex},"
             f"{self.volume},{self.uninherited},{self.effects}"
@@ -288,22 +279,23 @@ class HitObject:
             raise BeatmapError(f"Unknown HitObject of type {bin(self.type)}")
         self.type = type_str
 
+        # This is for beatmap analysis (see tools/beatmap_analyser.py)
         self.comboIndex = None
         self.comboNumber = None
         self.pos = None
         self.stack = None
 
-    def head(self):
+    def head(self) -> str:
         return f"{self.x},{self.y},{self.time},{self.type_int},{self.hitSound}"
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         """ Is overridden in child classes """
-        pass
+        return self.head()
 
 
 @dataclass
 class Circle(HitObject):
-    hitSample: str = "0:0:0:0:"
+    hitSample: Union[str, HitSample] = "0:0:0:0:"
 
     def __post_init__(self):
         super().__post_init__()
@@ -314,8 +306,7 @@ class Circle(HitObject):
             *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""], min_len=5)
         )
 
-    def osu_format(self):
-        self.hitSample: HitSample
+    def osu_format(self) -> str:
         return f"{self.head()},{self.hitSample.osu_format()}"
 
 
@@ -326,32 +317,30 @@ class Slider(HitObject):
     length: float
     edgeSounds: str = None
     edgeSets: str = None
-    hitSample: str = "0:0:0:0:"
+    hitSample: Union[str, HitSample] = "0:0:0:0:"
 
     def __post_init__(self):
         super().__post_init__()
         self.curveType, *self.curvePoints = split_get(self.curve, "|", [[str]])
         self.curvePoints = [ Vector( *split_get(point, ":", [int, int]) ) for point in self.curvePoints ]
 
-        if self.edgeSounds is None:
-            self.edgeSounds = [0] * self.slides
-        else:
-            self.edgeSounds = split_get(str(self.edgeSounds), "|", [[int]])
-
-        if self.edgeSets is None:
-            self.edgeSets = [(0, 0)] * self.slides
-        else:
-            edge_sets = split_get(self.edgeSets, "|", [[str]])
-            self.edgeSets = [ tuple( split_get(i, ":", [int, int]) ) for i in edge_sets]
+        self.edgeSounds = (
+            [0]*self.slides if self.edgeSounds is None else
+            split_get(str(self.edgeSounds), "|", [[int]])
+        )
+        self.edgeSets = (
+            [(0, 0)]*self.slides if self.edgeSets is None else
+            [tuple(split_get(i, ":", [int, int])) for i in self.edgeSets.split("|")]
+        )
 
         self.hitSample = HitSample(
             *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""], min_len=5)
         )
 
+        # This is for slider analysis (see tools/slider_analyser.py)
         self.additionalData = SliderAdditionalData()
 
-    def osu_format(self):
-        self.hitSample: HitSample
+    def osu_format(self) -> str:
         edge_sounds = "|".join( str(edge_sound) for edge_sound in self.edgeSounds )
         edge_sets = "|".join( "{}:{}".format(*edge_set) for edge_set in self.edgeSets )
         return (
@@ -359,7 +348,7 @@ class Slider(HitObject):
             f"{edge_sounds},{edge_sets},{self.hitSample.osu_format()}"
         )
 
-    def ball_pos(self, time):
+    def ball_pos(self, time):  # TODO: update
         if self.additionalData.path is None:
             raise ValueError("path has not yet been calculated")
 
@@ -381,7 +370,7 @@ class Slider(HitObject):
 @dataclass
 class Spinner(HitObject):
     endTime: int
-    hitSample: str = "0:0:0:0:"
+    hitSample: Union[str, HitSample] = "0:0:0:0:"
 
     def __post_init__(self):
         super().__post_init__()
@@ -389,8 +378,7 @@ class Spinner(HitObject):
             *split_get(self.hitSample, ":", [int, int, int, int, str], [0, 0, 0, 0, ""], min_len=5)
         )
 
-    def osu_format(self):
-        self.hitSample: HitSample
+    def osu_format(self) -> str:
         return f"{self.head()},{self.endTime},{self.hitSample.osu_format()}"
 
 
@@ -403,7 +391,7 @@ class Hold(HitObject):
         self.endTime, *sample = split_get(self.params, ":", [int, int, int, int, int, str], [0, 0, 0, 0, 0, ""], min_len=6)
         self.hitSample = HitSample(*sample)
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.params}"
 
 
@@ -426,24 +414,19 @@ class Beatmap:
     HitObjects: list[HitObject]
     Path: str
 
-    def get_hash(self):
+    def get_hash(self) -> str:
         return hashlib.md5( open(self.Path, "rb").read() ).hexdigest()
 
-    def beat_length(self, time):
+    def beat_length(self, time: int) -> float:
         beat_length = 500  # Default value
-
         for point in self.TimingPoints:
-            if point.time > time:
-                break
-
+            if point.time > time: break
             if point.uninherited:
                 beat_length = point.beatLength
-
         return beat_length
 
-    def slider_velocity(self, time):
+    def slider_velocity(self, time: int) -> float:
         beat_length = 500  # Default value
-
         # Look for base beat length
         for point in self.TimingPoints:
             if point.uninherited:
@@ -451,12 +434,9 @@ class Beatmap:
                 break
 
         velocity_multiplier = -100  # Default value
-
         # Get current timing point settings
         for point in self.TimingPoints:
-            if point.time > time:
-                break
-
+            if point.time > time: break
             if point.uninherited:
                 beat_length = point.beatLength
                 velocity_multiplier = -100
@@ -466,5 +446,5 @@ class Beatmap:
         return 100 * self.Difficulty.SliderMultiplier * (-100 / velocity_multiplier) * (1 / beat_length)
 
 
-class BeatmapError(BaseException):
+class BeatmapError(Exception):
     pass

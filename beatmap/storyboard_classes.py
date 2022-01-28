@@ -56,54 +56,33 @@ EVENT_ORIGIN_INT_TO_STR = {
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def get_event_type_str(event_type):
-    if isinstance(event_type, int):
-        return EVENT_TYPE_INT_TO_STR[event_type]
-
-    return event_type
+def get_event_type_str(event_type: Union[int, str]) -> str:
+    return EVENT_TYPE_INT_TO_STR[event_type] if isinstance(event_type, int) else event_type
 
 
-def get_event_class(event_type):
+def get_event_class(event_type: Union[int, str]) -> type:
     event_type = get_event_type_str(event_type)
-    if event_type == "Image":
-        return Image
-    if event_type == "Video":
-        return Video
-    if event_type == "Break":
-        return Break
-    if event_type == "BackgroundColor":
-        return BackgroundColor
-    if event_type == "Sprite":
-        return Sprite
-    if event_type == "Sample":
-        return Sample
-    if event_type == "Animation":
-        return Animation
+    if event_type == "Image":           return Image
+    if event_type == "Video":           return Video
+    if event_type == "Break":           return Break
+    if event_type == "BackgroundColor": return BackgroundColor
+    if event_type == "Sprite":          return Sprite
+    if event_type == "Sample":          return Sample
+    if event_type == "Animation":       return Animation
 
 
-def get_command_class_and_arg_count(command):
-    if command == "F":
-        return Fade, 2
-    if command == "M":
-        return Move, 4
-    if command == "MX":
-        return MoveX, 2
-    if command == "MY":
-        return MoveY, 2
-    if command == "S":
-        return Scale, 2
-    if command == "V":
-        return VectorScale, 4
-    if command == "R":
-        return Rotate, 2
-    if command == "C":
-        return Color, 6
-    if command == "P":
-        return Parameter, 1
-    if command == "L":
-        return Loop, 2
-    if command == "T":
-        return Trigger, 3
+def get_command_class_and_arg_count(command: str) -> tuple[type, int]:
+    if command == "F":  return Fade, 2
+    if command == "M":  return Move, 4
+    if command == "MX": return MoveX, 2
+    if command == "MY": return MoveY, 2
+    if command == "S":  return Scale, 2
+    if command == "V":  return VectorScale, 4
+    if command == "R":  return Rotate, 2
+    if command == "C":  return Color, 6
+    if command == "P":  return Parameter, 1
+    if command == "L":  return Loop, 2
+    if command == "T":  return Trigger, 3
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -120,12 +99,12 @@ class Event:
         if isinstance(self.type, int):
             self.type = EVENT_TYPE_INT_TO_STR[self.type]
 
-    def type_int(self):
+    def type_int(self) -> int:
         return EVENT_TYPE_STR_TO_INT[self.type]
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         """ Is overridden in child classes """
-        pass
+        return ""
 
 
 @dataclass
@@ -139,7 +118,7 @@ class Image(Event):
         super().__post_init__()
         self.commands = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"0,{self.startTime},{self.filename},{self.xOffset},{self.yOffset}"
 
 
@@ -154,7 +133,7 @@ class Video(Event):
         super().__post_init__()
         self.commands = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"1,{self.startTime},{self.filename},{self.xOffset},{self.yOffset}"
 
 
@@ -163,7 +142,7 @@ class Break(Event):
     startTime: int
     endTime: int
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"2,{self.startTime},{self.endTime}"
 
 
@@ -178,7 +157,7 @@ class BackgroundColor(Event):  # Very obscure class, not sure of its use
         super().__post_init__()
         self.color = (self.r, self.g, self.b)
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"3,{self.startTime},{self.r},{self.g},{self.b}"
 
 
@@ -196,10 +175,9 @@ class Sprite(Event):
             self.layer = EVENT_LAYER_INT_TO_STR[self.layer]
         if isinstance(self.origin, int):
             self.origin = EVENT_ORIGIN_INT_TO_STR[self.origin]
-
         self.commands = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"4,{self.layer},{self.origin},{self.filepath},{self.x},{self.y}"
 
 
@@ -215,7 +193,7 @@ class Sample(Event):
         if isinstance(self.layer, int):
             self.layer = EVENT_LAYER_INT_TO_STR[self.layer]
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"4,{self.time},{self.layer},{self.filepath},{self.volume}"
 
 
@@ -236,10 +214,9 @@ class Animation(Event):
             self.layer = EVENT_LAYER_INT_TO_STR[self.layer]
         if isinstance(self.origin, int):
             self.origin = EVENT_ORIGIN_INT_TO_STR[self.origin]
-
         self.commands = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return (
             f"4,{self.layer},{self.origin},{self.filepath},{self.x},{self.y},"
             f"{self.frameCount},{self.frameDelay},{self.loopType}"
@@ -257,12 +234,12 @@ class BaseCommand:
     indentation: int
     event: str
 
-    def cmd(self):
+    def cmd(self) -> str:
         return (" " * self.indentation) + self.event
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         """ Is overridden in child classes """
-        pass
+        return ""
 
 
 @dataclass
@@ -271,7 +248,7 @@ class SpriteCommand(BaseCommand):
     startTime: int = 0
     endTime: int = 0
 
-    def head(self):
+    def head(self) -> str:
         return f"{self.cmd()},{self.easing},{self.startTime},{self.endTime}"
 
 
@@ -280,7 +257,7 @@ class Fade(SpriteCommand):
     startOpacity: float = 0.0
     endOpacity: float = 0.0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startOpacity},{self.endOpacity}"
 
 
@@ -291,7 +268,7 @@ class Move(SpriteCommand):
     endX: int = 0
     endY: int = 0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startX},{self.startY},{self.endX},{self.endY}"
 
 
@@ -300,7 +277,7 @@ class MoveX(SpriteCommand):
     startX: int = 0
     endX: int = 0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startX},{self.endX}"
 
 
@@ -309,7 +286,7 @@ class MoveY(SpriteCommand):
     startY: int = 0
     endY: int = 0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startY},{self.endY}"
 
 
@@ -318,7 +295,7 @@ class Scale(SpriteCommand):
     startScale: float = 1.0
     endScale: float = 0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startScale},{self.endScale}"
 
 
@@ -329,7 +306,7 @@ class VectorScale(SpriteCommand):
     endScaleX: float = 0
     endScaleY: float = 0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startScaleX},{self.startScaleY},{self.endScaleX},{self.endScaleY}"
 
 
@@ -338,7 +315,7 @@ class Rotate(SpriteCommand):
     startRotate: float = 0.0
     endRotate: float = 0.0
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startRotate},{self.endRotate}"
 
 
@@ -358,7 +335,7 @@ class Color(SpriteCommand):
                 if isinstance(val, str):
                     setattr(self, param, int(val, base=16))
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.startR},{self.startG},{self.startB},{self.endR},{self.endG}{self.endB}"
 
 
@@ -366,7 +343,7 @@ class Color(SpriteCommand):
 class Parameter(SpriteCommand):
     parameter: str = ''
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.head()},{self.parameter}"
 
 
@@ -380,7 +357,7 @@ class Loop(BaseCommand):
         if self.loopCommands is None:
             self.loopCommands = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.cmd()},{self.startTime},{self.loopCount}"
 
 
@@ -395,5 +372,5 @@ class Trigger(BaseCommand):
         if self.triggerCommands is None:
             self.triggerCommands = []
 
-    def osu_format(self):
+    def osu_format(self) -> str:
         return f"{self.cmd()},{self.triggerType},{self.startTime},{self.endTime}"
