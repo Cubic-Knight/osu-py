@@ -7,7 +7,7 @@ import hashlib
 from typing import Tuple, Union
 from dataclasses import dataclass
 from .storyboard_classes import Event
-from ..helpers import Vector, segment_fraction, split_get
+from ..helpers import Vector, segment_fraction, split_get, zigzag_function
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -354,17 +354,16 @@ class Slider(HitObject):
             f"{edge_sounds},{edge_sets},{self.hitSample.osu_format()}"
         )
 
-    def ball_pos(self, time):  # TODO: update
+    def ball_pos(self, time: float) -> Vector:
         if self.additionalData.path is None:
             raise ValueError("path has not yet been calculated")
 
         slide_duration = self.additionalData.slideDuration
-        relative_time = abs((time - self.time + slide_duration) % (2*slide_duration) - slide_duration)
+        relative_time = zigzag_function(slide_duration, start_x=self.time)(time)
 
         timestamps = list(self.additionalData.path.keys())
         for i, timestamp in enumerate(timestamps):
-            if timestamp < relative_time and i != len(timestamps)-1:
-                continue
+            if timestamp < relative_time and i != len(timestamps)-1: continue
 
             return segment_fraction(
                 (timestamp - relative_time) / (timestamp - timestamps[i-1]),

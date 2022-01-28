@@ -1,3 +1,4 @@
+from .miscellaneous import zigzag_function
 from .paths import osu_fp, complete_path
 from .parsing import split_get
 from .plane_classes import Vector, CartesianLine
@@ -7,5 +8,6 @@ __all__ = [
     'complete_path', 'split_get',
     'Vector', 'CartesianLine',
     'segment_fraction', 'bezier', 'angles_are_rotating_clockwise', 'find_circle_center',
+    'zigzag_function',
     'osu_fp'
 ]
