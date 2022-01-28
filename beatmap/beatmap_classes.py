@@ -71,13 +71,15 @@ class SliderAdditionalData:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+@dataclass
 class Settings:
-    @classmethod
-    def from_dict(cls, d: dict):
-        self = cls()
-        for key, value in d.items():
-            setattr(self, key, value)
-        return self
+    InitDict: dict = None
+
+    def __post_init__(self):
+        if self.InitDict is not None:
+            for key, value in self.InitDict.items():
+                setattr(self, key, value)
+        del self.InitDict
 
 
 @dataclass
@@ -121,6 +123,7 @@ class EditorSettings(Settings):
     TimelineZoom: float = 1.0
 
     def __post_init__(self):
+        super().__post_init__()
         if self.Bookmarks is None:
             self.Bookmarks = []
 
@@ -149,6 +152,7 @@ class MetadataSettings(Settings):
     BeatmapSetID: int = 0
 
     def __post_init__(self):
+        super().__post_init__()
         self.Tags = [tag for tag in self.Tags.split(" ")]
 
     def osu_format(self) -> str:
@@ -172,6 +176,7 @@ class DifficultySettings(Settings):
     SliderTickRate: float = 1.0
 
     def __post_init__(self):
+        super().__post_init__()
         if self.OverallDifficulty is None:
             raise BeatmapError("Beatmap has no OD set")
         if self.HPDrainRate is None:
@@ -205,6 +210,7 @@ class ColorSettings(Settings):
     SliderBorder: Tuple[int, int, int] = None
 
     def __post_init__(self):
+        super().__post_init__()
         self.ComboColors = [
             color for i in range(1, 9)
             if (color := getattr(self, f"Combo{i}", None)) is not None

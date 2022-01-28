@@ -149,13 +149,13 @@ def decompress_beatmap(path: str) -> Beatmap:
 
     return Beatmap(
         FileFormat=file_format,
-        General=GeneralSettings.from_dict(general),
-        Editor=EditorSettings.from_dict(editor),
-        Metadata=MetadataSettings.from_dict(metadata),
-        Difficulty=DifficultySettings.from_dict(difficulty),
+        General=GeneralSettings(general),
+        Editor=EditorSettings(editor),
+        Metadata=MetadataSettings(metadata),
+        Difficulty=DifficultySettings(difficulty),
         Events=events,
         TimingPoints=timing_points,
-        Colors=ColorSettings.from_dict(colors),
+        Colors=ColorSettings(colors),
         HitObjects=hit_objects,
         Path=path
     )
