@@ -3,87 +3,51 @@ import struct
 from .replay_classes import *
 from ..helpers import osu_fp, complete_path
 
-file_bytes = []  # This var is global because it is used in all functions
 
-TYPE_LENGTH = {
-    "byte": 1,
-    "short": 2,
-    "int": 4,
-    "long": 8
-}
-
-
-def get_int(offset, length):
-    result = 0
-    for byte in file_bytes[offset + length - 1:offset - 1:-1]:
-        result <<= 8
-        result += byte
-    return result, length
-
-
-def get_length(offset):
+def get_uleb128(offset: int, file_bytes: bytes) -> tuple[int, int]:
     if file_bytes[offset] > 0x7f:
-        tmp_length, tmp_str_offset = get_length(offset + 1)
+        tmp_length, tmp_str_offset = get_uleb128(offset + 1, file_bytes)
         return (tmp_length << 7) + file_bytes[offset] - 0x80, tmp_str_offset + 1
     else:
-        return file_bytes[offset], 2
+        return file_bytes[offset], 1
 
 
-def get_string(offset):
-    if file_bytes[offset] == 0x0b:
-        length, string_offset = get_length(offset + 1)
-        return "".join([chr(i) for i in file_bytes[offset + string_offset:offset + string_offset + length]]), \
-               string_offset + length
-    else:
-        return "", 1
-
-
-def get_array(offset, length):
-    decompressed_array = lzma.decompress(bytes(file_bytes[offset:offset + length]))
-    return "".join([chr(i) for i in decompressed_array])
-
-
-def get_double(offset):
-    value = bytearray( file_bytes[offset:offset+8] )
-    if len(value) == 8:
-        double, = struct.unpack("d", value)  # struct.unpack returns a 1-tuple, so it is unpacked by the comma
-        return double, 8
-
-    else:
-        return None, 0
-
-
-def decompress_replay(path):
-    """
-    decompress_replay(path) -> dict
-
-    :param path: The absolute path to the replay file (.osr). Can also be the path relative to the "Replays" folder
-    """
-    global file_bytes
-
+def decompress_replay(path: str) -> Replay:
     path = complete_path(path, root=osu_fp.get(), folder="Replays\\", ext=".osr")
     with open(path, 'rb') as file:
-        file_bytes = [i for i in file.read()]
+        file_bytes = file.read()
 
-    replay_data = []
+    # Locate the length of every string beforehand
+    str_formats = []
     offset = 0
-    for data_name, data_type in DATA_TYPES.items():
-        if data_type in TYPE_LENGTH:  # For number values (byte, short, int and long)
-            data, data_length = get_int(offset, TYPE_LENGTH[data_type])
-
-        elif data_type == "str":
-            data, data_length = get_string(offset)
-
-        elif data_type == "array":
-            data, data_length = get_array(offset, replay_data[-1]), replay_data[-1]
-
-        elif data_type == "double":
-            data, data_length = get_double(offset)
-
+    for pos in [5, 6, 7, 31]:
+        addr = pos + offset
+        if file_bytes[addr] == 0x00:
+            str_formats.append("x")
+        elif file_bytes[addr] == 0x0b:
+            str_len, size_of_uleb128 = get_uleb128(addr + 1, file_bytes)
+            str_formats.append(f"x{size_of_uleb128}x{str_len}s")
+            offset += size_of_uleb128 + str_len
         else:
-            data, data_length = None, 0
+            raise ValueError
 
-        replay_data.append(data)
-        offset += data_length
+    # Locate the length of the replay beforehand
+    replay_length, = struct.unpack("I", file_bytes[40+offset:44+offset])
 
-    return Replay(*replay_data)
+    f1, f2, f3, f4 = str_formats
+    replay_data = struct.unpack(
+        f"<BI{f1}{f2}{f3}6HIHBI{f4}QI{replay_length}sQ",
+        file_bytes[:52+offset+replay_length]
+    )
+    additional_mod_info = (
+        struct.unpack("d", value)
+        if len(value := file_bytes[52+offset+replay_length:]) == 8
+        else None
+    )
+
+    replay_data = [
+        data.decode("utf-8") if i in (2, 3, 4, 15) else data
+        for i, data in enumerate(replay_data)
+    ]
+    replay_data[18] = lzma.decompress(replay_data[18]).decode("utf-8")  # Decompress the replay
+    return Replay(*replay_data, additional_mod_info)

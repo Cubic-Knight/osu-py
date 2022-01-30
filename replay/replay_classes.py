@@ -36,6 +36,14 @@ DATA_TYPES = {
     'additionalModInfo': 'double'
 }
 
+NUMBER_TYPES = {
+        "byte": "B",
+        "short": "H",
+        "int": "I",
+        "long": "Q",
+        "double": "d"
+    }
+
 MODS_INDEX_TO_STR = {
     0: "NoFail",
     1: "Easy",
@@ -112,7 +120,7 @@ class Replay:
     mods: Union[int, list[str]]
     lifeGraph: Union[str, dict[int, float]]
     time: int
-    replayLength: Union[str, list[ReplayFrame]]
+    replayLength: int
     replay: Union[str, list[ReplayFrame]]
     scoreID: int
     additionalModInfo: float
@@ -127,25 +135,18 @@ class Replay:
         if self.lifeGraph == "":
             self.lifeGraph = {}
         elif isinstance(self.lifeGraph, str):
-            life_graph = {}
-            for point in split_get(self.lifeGraph[:-1], ",", [[str]]):
-                time, health = split_get(point, "|", [int, float])
-                life_graph[time] = health
-            self.lifeGraph = life_graph
+            self.lifeGraph = {
+                time: health
+                for point in split_get(self.lifeGraph[:-1], ",", [[str]])
+                for time, health in [ split_get(point, "|", [int, float]) ]
+            }
 
         if isinstance(self.replay, str):
-            replay = []
-            for frame in split_get(self.replay[:-1], ",", [[str]]):
-                time, x, y, action = split_get(frame, "|", [int, float, float, int])
-                replay.append(
-                    ReplayFrame(
-                        time=time,
-                        x=x,
-                        y=y,
-                        action=action
-                    )
-                )
-            self.replay = []
+            self.replay = [
+                ReplayFrame(time, x, y, action)
+                for frame in split_get(self.replay[:-1], ",", [[str]])
+                for time, x, y, action in [ split_get(frame, "|", [int, float, float, int]) ]
+            ]
 
     def add_frame(self, time: int, x: float, y: float, action: int = 0):
         frame = ReplayFrame(
