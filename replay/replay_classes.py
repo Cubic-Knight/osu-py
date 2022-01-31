@@ -12,38 +12,6 @@ from ..helpers import split_get
 # Some constants and tables that are useful
 # ----------------------------------------------------------------------------------------------------------------------
 
-DATA_TYPES = {
-    'gameMode': 'byte',
-    'version': 'int',
-    'beatmapHash': 'str',
-    'playerName': 'str',
-    'replayHash': 'str',
-    'count300': 'short',
-    'count100': 'short',
-    'count50': 'short',
-    'countGeki': 'short',
-    'countKatu': 'short',
-    'countMiss': 'short',
-    'score': 'int',
-    'maxCombo': 'short',
-    'fullCombo': 'byte',
-    'mods': 'int',
-    'lifeGraph': 'str',
-    'time': 'long',
-    'replayLength': 'int',
-    'replay': 'array',
-    'scoreID': 'long',
-    'additionalModInfo': 'double'
-}
-
-NUMBER_TYPES = {
-        "byte": "B",
-        "short": "H",
-        "int": "I",
-        "long": "Q",
-        "double": "d"
-    }
-
 MODS_INDEX_TO_STR = {
     0: "NoFail",
     1: "Easy",

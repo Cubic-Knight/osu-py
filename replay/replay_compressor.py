@@ -4,52 +4,31 @@ import hashlib
 from .replay_classes import *
 from ..helpers import osu_fp, complete_path
 
-LZMA_CONFIG = [
-    lzma.FORMAT_ALONE,
-    -1,
-    None,
-    [
-        {
-            "id": lzma.FILTER_LZMA1,
-            "mode": lzma.MODE_NORMAL,
-            "lc": 3,
-            "lp": 0,
-            "pb": 2,
-            "preset": 2,
-            "dict_size": 1 << 21
-        }
-    ]
-]
+LZMA_CONFIG = {
+    "id": lzma.FILTER_LZMA1,
+    "mode": lzma.MODE_NORMAL,
+    "lc": 3,
+    "lp": 0,
+    "pb": 2,
+    "preset": 2,
+    "dict_size": 1 << 21
+}
 
 
-def compress_array(array: list[ReplayFrame]) -> tuple[bytes, str]:
-    formatted_array = "".join(
-        f"{frame.time}|{frame.x:.7g}|{frame.y:.7g}|{frame.action},"
-        for frame in array
-    )
-    encoded = bytes(formatted_array, "ascii")
-    return lzma.compress(encoded, *LZMA_CONFIG), hashlib.md5(encoded).hexdigest()
-
-
-def uleb128(num: int) -> bytes:
-    output = []
-    while num > 0:
-        output.append(num % 0x80 + 0x80)
-        num >>= 7
-    output[-1] -= 0x80
-    return bytes(output)
-
-
-def compress_string(string: str) -> bytes:
+def osr_string(string: str) -> bytes:
     if string == "": return bytes([0x00])
-    return bytes([0x0b]) + uleb128(len(string)) + bytes(string, "utf-8")
+    # Determine the uleb128 that corresponds to the length of the string
+    str_len = []
+    l = len(string)
+    while l:
+        str_len.append(l % 0x80 + 0x80)
+        l >>= 7
+    str_len[-1] -= 0x80  # The last byte does not exceed 0x80
+
+    return bytes([0x0b]) + bytes(str_len) + bytes(string, "utf-8")
 
 
-def format_number(num: float, format: str) -> bytes:
-    return struct.pack(f"<{format}", num)
-
-
-def compress_replay(replay: Replay, output_path=None) -> bytes:
+def compress_replay(replay: Replay, output_path: str = None) -> bytes:
     # Reformat mod list to an integer
     mods = sum(
         1 << i
@@ -57,36 +36,51 @@ def compress_replay(replay: Replay, output_path=None) -> bytes:
         if mod in replay.mods
     )
 
+    # Compress the array early to get its length
+    replay_str = "".join(
+        f"{frame.time}|{frame.x:.7g}|{frame.y:.7g}|{frame.action},"
+        for frame in replay.replay
+    ).encode("ascii")
+    compressed_array = lzma.compress(replay_str, format=lzma.FORMAT_ALONE, filters=[LZMA_CONFIG])
+    replay_hash = hashlib.md5(replay_str).hexdigest() if replay.replayHash is None else replay.replayHash
+    replay_length = len(compressed_array)
+
     # Reformat life graph dictionary to a string
     life_graph = "".join(
         f"{time}|{health:n},"
         for time, health in replay.lifeGraph.items()
     )
 
-    # Compress the array early to get its length
-    compressed_array, replay_hash = compress_array(replay.replay)
-    replay_length = len(compressed_array)
-    # If replayHash is not set, give it a hash
-    if replay.replayHash is None:
-        replay.replayHash = replay_hash
+    # Encode strings into their .osr format
+    beatmap_hash = osr_string(replay.beatmapHash)
+    player_name = osr_string(replay.playerName)
+    replay_hash = osr_string(replay_hash)
+    life_graph = osr_string(life_graph)
 
-    compressed_replay = b''
-    for data_name, data_type in DATA_TYPES.items():
-        data = getattr(replay, data_name)
-        if data is None:
-            continue
-
-        # Override already computed data
-        if data_name == "lifeGraph": data = life_graph
-        if data_name == "mods": data = mods
-        if data_name == "replayLength": data = replay_length
-
-        if data_type in NUMBER_TYPES:  # For number values (byte, short, int and long)
-            compressed_replay += format_number(data, NUMBER_TYPES[data_type])
-        elif data_type == "str":
-            compressed_replay += compress_string(data)
-        elif data_type == "array":
-            compressed_replay += compressed_array
+    compressed_replay = struct.pack(
+        f"<BI{len(beatmap_hash)}s{len(player_name)}s{len(replay_hash)}s6HIHBI{len(life_graph)}sQI{replay_length}sQd",
+        replay.gameMode,
+        replay.version,
+        beatmap_hash,
+        player_name,
+        replay_hash,
+        replay.count300,
+        replay.count100,
+        replay.count50,
+        replay.countGeki,
+        replay.countKatu,
+        replay.countMiss,
+        replay.score,
+        replay.maxCombo,
+        replay.fullCombo,
+        mods,
+        life_graph,
+        replay.time,
+        replay_length,
+        compressed_array,
+        replay.scoreID,
+        replay.additionalModInfo if replay.additionalModInfo is not None else 0.0
+    )
 
     if output_path is not None:
         # Write the return value to a file
