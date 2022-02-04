@@ -25,19 +25,12 @@ def analyse_beatmap(beatmap: Beatmap, loop_ms: int = 10, bezier_precision: int =
         obj.comboNumber = combo_number
 
         if obj.type == "slider":
-            obj: Slider
             analyse_slider(beatmap, obj, loop_ms, bezier_precision)
-            obj.additionalData.endPos = Vector(
-                obj.additionalData.endX,
-                obj.additionalData.endY
-            )
 
     # Scan for stacks
     last_hit_objects: list[HitObject] = []
     for obj in beatmap.HitObjects[::-1]:
-        obj: HitObject
-
-        if obj.type in ["spinner", "hold"]:  # Spinners and hold do not create stacks
+        if obj.type in ["spinner", "hold"]:  # Spinners and holds do not create stacks
             continue
 
         # Delete expired hit objects
@@ -62,25 +55,25 @@ def analyse_beatmap(beatmap: Beatmap, loop_ms: int = 10, bezier_precision: int =
         if obj.type == "slider":
             obj: Slider
             slider_end = HitObject(
-                obj.additionalData.endX,
-                obj.additionalData.endY,
-                obj.additionalData.endTime,
+                obj.end.x,
+                obj.end.y,
+                obj.end.time,
                 1,
                 0
             )
             # Check if slider_end can be stacked
-            obj.additionalData.endStack = ("none", 0)
+            obj.end.stack = ("none", 0)
             for o in last_hit_objects[::-1]:
                 if dist(Vector(o.x, o.y), Vector(slider_end.x, slider_end.y)) < 2.9:
                     if o.stack[0] == "stack":
-                        obj.additionalData.endStack = ("down", 0)
+                        obj.end.stack = ("down", 0)
                         break
                     if o.type == "slider" or o.stack[0] == "up":
                         obj.stack = ("up", o.stack[1] + 1)
-                        obj.additionalData.endStack = ("up", o.stack[1] + 1)
+                        obj.end.stack = ("up", o.stack[1] + 1)
                         break
                     if o.type == "circle":
-                        obj.additionalData.endStack = ("down", 0)
+                        obj.end.stack = ("down", 0)
                         break
                     break
 
@@ -116,25 +109,26 @@ def analyse_beatmap(beatmap: Beatmap, loop_ms: int = 10, bezier_precision: int =
             to_append.stack = obj.stack
             last_hit_objects.append(to_append)
 
-        if obj.type == "slider" and obj.additionalData.endStack[0] == "down":  # Same but for slider ends
+        if obj.type == "slider" and obj.end.stack[0] == "down":  # Same but for slider ends
             obj: Slider
             to_append = HitObject(
-                obj.additionalData.endX,
-                obj.additionalData.endY,
-                obj.additionalData.endTime,
+                obj.end.x,
+                obj.end.y,
+                obj.end.time,
                 1,
                 0
             )
-            to_append.stack = obj.additionalData.endStack
+            to_append.stack = obj.end.stack
             last_hit_objects.append(to_append)
 
         obj.pos += obj.stack[1] * stacked
         if obj.type == "slider":  # Sliders have more data to modify
             obj: Slider
-            obj.additionalData.endPos += obj.stack[1] * stacked
+            obj.tail.pos += obj.stack[1] * stacked
+            obj.end.pos += obj.stack[1] * stacked
 
-            for time, point in obj.additionalData.path.items():
-                obj.additionalData.path[time] = point + obj.stack[1] * stacked
+            for time, point in obj.path.items():
+                obj.path[time] = point + obj.stack[1] * stacked
 
-            for tick in obj.additionalData.ticksPos:
+            for tick in obj.ticksPos:
                 tick.pos += obj.stack[1] * stacked

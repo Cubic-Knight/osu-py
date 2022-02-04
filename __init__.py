@@ -9,7 +9,7 @@ __all__ = [
     'BaseCommand', 'Loop', 'Trigger',
     'SpriteCommand', 'Fade', 'Move', 'MoveX', 'MoveY', 'Scale', 'VectorScale', 'Rotate', 'Color', 'Parameter',
     'HitSample', 'TimingPoint',
-    'HitObject', 'Circle', 'Slider', 'SliderAdditionalData', 'Spinner', 'Hold',
+    'HitObject', 'Circle', 'Slider', 'SliderAdditionalPoint', 'Spinner', 'Hold',
     'Beatmap', 'Replay', 'ReplayFrame',
     'BeatmapError',
 

@@ -53,16 +53,12 @@ class SliderTick:
 
 
 @dataclass
-class SliderAdditionalData:
-    endX: int = None
-    endY: int = None
-    endPos: Vector = None
-    endTime: float = None
-    endStack: Tuple[str, int] = None
-    slideDuration: float = None
-    duration: float = None
-    ticksPos: list[SliderTick] = None
-    path: dict[int, Vector] = None
+class SliderAdditionalPoint:
+    x: int = None
+    y: int = None
+    pos: Vector = None
+    time: float = None
+    stack: int = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -344,7 +340,12 @@ class Slider(HitObject):
         )
 
         # This is for slider analysis (see tools/slider_analyser.py)
-        self.additionalData = SliderAdditionalData()
+        self.tail = SliderAdditionalPoint()
+        self.end = SliderAdditionalPoint()
+        self.slideDuration = None
+        self.duration = None
+        self.ticksPos = None
+        self.path = None
 
     def osu_format(self) -> str:
         edge_sounds = "|".join( str(edge_sound) for edge_sound in self.edgeSounds )
@@ -355,20 +356,20 @@ class Slider(HitObject):
         )
 
     def ball_pos(self, time: float) -> Vector:
-        if self.additionalData.path is None:
+        if self.path is None:
             raise ValueError("path has not yet been calculated")
 
-        slide_duration = self.additionalData.slideDuration
+        slide_duration = self.slideDuration
         relative_time = zigzag_function(slide_duration, start_x=self.time)(time)
 
-        timestamps = list(self.additionalData.path.keys())
+        timestamps = list(self.path.keys())
         for i, timestamp in enumerate(timestamps):
             if timestamp < relative_time and i != len(timestamps)-1: continue
 
             return segment_fraction(
                 (timestamp - relative_time) / (timestamp - timestamps[i-1]),
-                self.additionalData.path[timestamp],
-                self.additionalData.path[timestamps[i-1]]
+                self.path[timestamp],
+                self.path[timestamps[i-1]]
             )
 
 
