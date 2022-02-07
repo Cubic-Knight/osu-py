@@ -12,6 +12,6 @@ __all__ = [
     'HitObject', 'Circle', 'Slider', 'SliderAdditionalPoint', 'Spinner', 'Hold',
     'Beatmap', 'BeatmapError',
 
-    'get_hit_object_class', 'get_event_class',
+    'get_event_class',
     'decompress_beatmap', 'compress_beatmap',
 ]

@@ -1,9 +1,40 @@
 from .beatmap_classes import *
 from .storyboard_classes import *
 from ..helpers import osu_fp, complete_path, split_get
-
+from re import match, findall
 
 def get_commands(command: str) -> list[BaseCommand]:
+    """ Extract of code from previous version:
+        if section == "[Events]":
+            if line.startswith(" ") or line.startswith("_"):  # Storyboard command
+                if not isinstance(events[-1], (Image, Video, Sprite, Animation)):
+                    raise BeatmapError("command assigned to an event that doesn't support commands")
+
+                cmd = get_commands(line)
+                indentation = cmd[0].indentation
+                target_list = events[-1].commands
+
+                while len(target_list) > 0 and target_list[-1].indentation > indentation:
+                    if isinstance(target_list[-1], Loop):
+                        target_list = target_list[-1].loopCommands
+                        continue
+
+                    if isinstance(target_list[-1], Trigger):
+                        target_list = target_list[-1].triggerCommands
+                        continue
+
+                    break
+
+                target_list.extend(cmd)
+                continue
+
+            event_type, *params = split_get(line, ",", [[int, str]])
+            events.append(
+                get_event_class(event_type)(event_type, *params)
+            )
+            continue
+    """
+
     cmd, *data = split_get(command, ",", [str, [int, float, str]])
     indent, event = cmd.replace(" ", "_").count("_"), cmd.replace("_", " ").strip()
 
@@ -50,102 +81,50 @@ def get_commands(command: str) -> list[BaseCommand]:
 def decompress_beatmap(path: str) -> Beatmap:
     path = complete_path(path, root=osu_fp.get(), folder="Songs\\", ext=".osu")  # Be sure the path is correct
     with open(path, "r", encoding="utf-8") as file:
-        lines = (i[:-1] for i in file.readlines())
+        file_content = file.read()
 
-    line = next(lines)  # "osu file format v#"
-    file_format = int(line[17:] if line[0] == 'o' else line[18:])
+    file_format = int( match(r"^[^o]?osu file format v(\d+)", file_content).group(1) )
+    sections = {
+        name: [line for line in content.split("\n") if line != "" and not line.startswith("//")]
+        for name, content in findall(r"\n\[(\w+)\]\n((?:[^\[]+|(?<!\n)\[)+)(?=\n\[|$)", file_content)
+    }
 
-    # Initialise the dicts and lists
-    general = {}
-    editor = {}
-    metadata = {}
-    difficulty = {}
-    events = []
-    timing_points = []
-    colors = {}
-    hit_objects = []
-
-    section = None
-    for line in lines:
-        if line == "" or line.startswith("//"):  # Empty line or comment
-            continue
-
-        if line.startswith("["):  # Section change
-            section = line
-            continue
-
-        # Evaluate the line depending on the section
-        if section == "[General]":
-            key, value = split_get(line, ":", [str, (int, float, str)])
-            general[key] = value
-            continue
-
-        if section == "[Editor]":
-            key, value = split_get(line, ":", [str, (int, float, str)])
-            if key == "Bookmarks":
-                value = split_get(str(value), ",", [[int]])
-            editor[key] = value
-            continue
-
-        if section == "[Metadata]":
-            key, *value = split_get(line, ":", [str, [int, str]])
-            metadata[key] = ":".join(str(i) for i in value)  # .join is to avoid errors due to ":" in strings
-            continue
-
-        if section == "[Difficulty]":
-            key, value = split_get(line, ":", [str, float])
-            difficulty[key] = value
-            continue
-
-        if section == "[Events]":
-            if line.startswith(" ") or line.startswith("_"):  # Storyboard command
-                if not isinstance(events[-1], (Image, Video, Sprite, Animation)):
-                    raise BeatmapError("command assigned to an event that doesn't support commands")
-
-                cmd = get_commands(line)
-                indentation = cmd[0].indentation
-                target_list = events[-1].commands
-
-                while len(target_list) > 0 and target_list[-1].indentation > indentation:
-                    if isinstance(target_list[-1], Loop):
-                        target_list = target_list[-1].loopCommands
-                        continue
-
-                    if isinstance(target_list[-1], Trigger):
-                        target_list = target_list[-1].triggerCommands
-                        continue
-
-                    break
-
-                target_list.extend(cmd)
-                continue
-
-            event_type, *params = split_get(line, ",", [[int, str]])
-            events.append(
-                get_event_class(event_type)(event_type, *params)
-            )
-            continue
-
-        if section == "[TimingPoints]":
-            timing_points.append(
-                TimingPoint( *split_get(line, ",", [[int, float]]) )
-            )
-            continue
-
-        if section == "[Colours]":
-            key, value = split_get(line, ":", [str, str])
-            r, g, b = split_get(value, ",", [int, int, int])
-            colors[key] = (r, g, b)
-            continue
-
-        if section == "[HitObjects]":
-            params = split_get(line, ",", [[int, float, str]])
-            hit_objects.append(
-                get_hit_object_class(params[3])(*params)
-            )
-            continue
-
-        raise ValueError(f"Unknown section '{section}'")
+    general = {
+        key: value
+        for line in sections.get("General", [])
+        for key, value in [ split_get(line, ":", [str, (int, float, str)]) ]
+    }
+    editor = {
+        key: value if key != "Bookmarks" else split_get(str(value), ",", [[int]])
+        for line in sections.get("Editor", [])
+        for key, value in [ split_get(line, ":", [str, (int, float, str)]) ]
+    }
+    metadata = {
+        key: value
+        for line in sections.get("Metadata", [])
+        for key, value in [ split_get(line, ":", [str, (int, float, str)], max_split=1) ]
+    }
+    difficulty = {
+        key: value
+        for line in sections.get("Difficulty", [])
+        for key, value in [ split_get(line, ":", [str, float]) ]
+    }
+    events = [
+        ...  # TODO: handle events
+    ]
+    timing_points = [
+        TimingPoint( *split_get(line, ",", [[int, float]]) )
+        for line in sections.get("TimingPoints", [])
+    ]
+    colors = {
+        key: split_get(value, ",", [int, int, int])
+        for line in sections.get("Colours", [])
+        for key, value in [ split_get(line, ":", [str, str]) ]
+    }
+    hit_objects = [
+        HitObject.from_params(*split_get(line, ",", [[int, float, str]]))
+        for line in sections.get("HitObjects", [])
+    ]
 
     return Beatmap(
         FileFormat=file_format,

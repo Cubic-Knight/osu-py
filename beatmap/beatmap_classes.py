@@ -28,17 +28,6 @@ def get_hit_object_type_str(obj_type: int) -> str:
     return "unknown"
 
 
-def get_hit_object_class(obj_type: int) -> type:
-    obj_type = get_hit_object_type_str(obj_type)
-    if obj_type == "circle":
-        return Circle
-    if obj_type == "slider":
-        return Slider
-    if obj_type == "spinner":
-        return Spinner
-    if obj_type == "hold":
-        return Hold
-
 # ----------------------------------------------------------------------------------------------------------------------
 # SliderAdditionalData and SliderTick dataclasses. They are used in the Slider dataclass to hold data that is not
 #   directly given by the beatmap file.
@@ -285,6 +274,19 @@ class HitObject:
         self.comboNumber = None
         self.pos = None
         self.stack = None
+
+    @classmethod
+    def from_params(cls, *args):
+        obj_type = args[3]
+        if obj_type & 0b_0000_0001:
+            return Circle(*args)
+        if obj_type & 0b_0000_0010:
+            return Slider(*args)
+        if obj_type & 0b_0000_1000:
+            return Spinner(*args)
+        if obj_type & 0b_1000_0000:
+            return Hold(*args)
+        raise ValueError(f"Unknown object of type {obj_type}")
 
     def head(self) -> str:
         return f"{self.x},{self.y},{self.time},{self.type_int},{self.hitSound}"

@@ -13,7 +13,7 @@ def apply_first_correct_function(s: str, funcs: tuple, default: Any = ...):
 
 
 def split_get(s: str, sep: str, obj_funcs: list, defaults: list = None,
-              no_strip: bool = False, min_len: int = 0, max_len: int = 100):
+              max_split: int = -1, no_strip: bool = False, min_len: int = 0, max_len: int = 100):
     """
     Like str.split(), but can map specific functions on the results
     :param s: The string to split
@@ -24,13 +24,14 @@ def split_get(s: str, sep: str, obj_funcs: list, defaults: list = None,
         If the functions are placed in a list, the same mechanism applies, but like a star expression (max 1 list)
     :param defaults: The list of default values. They are used if all functions fail to return an object
         To represent the absence of a default value, use "..."
+    :param max_split: The maximum number of splits to do. -1 (default) means no limit
     :param no_strip: If this is False, all elements of the string will be stripped after the split
     :param min_len: The result will have at least that many elements (only if min_len <= max_len)
         If there is not enough elements after splitting, the result will be padded with elements of default
     :param max_len: The result will have at most that many elements (if min_len > max_len, min_len is ignored)
     """
     # Split s (and strip if not no_strip)
-    args = [i if no_strip else i.strip() for i in s.split(sep)]
+    args = [i if no_strip else i.strip() for i in s.split(sep, max_split)]
     # Try to resolve "starred expression" pattern; if there is no list, just ignore this step
     try:
         star = [isinstance(f, list) for f in obj_funcs].index(True)  # Find list
