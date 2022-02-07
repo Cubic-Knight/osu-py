@@ -9,9 +9,9 @@ def analyse_beatmap(beatmap: Beatmap, loop_ms: int = 10, bezier_precision: int =
     # Values that are used later in the function
     stack_leniency_time = ar_to_ms(beatmap.Difficulty.ApproachRate) * beatmap.General.StackLeniency
     stack_leniency_offset = cs_to_radius(beatmap.Difficulty.CircleSize) / 10
-    stacked = Vector(-stack_leniency_offset, -stack_leniency_offset)
+    stack_offset_unit = Vector(-stack_leniency_offset, -stack_leniency_offset)
 
-    # Evaluate comboNumber, comboIndex and additionalData (for sliders only)
+    # Evaluate comboNumber and comboIndex
     combo_index = 0
     combo_number = 0
     for obj in beatmap.HitObjects:
@@ -28,107 +28,64 @@ def analyse_beatmap(beatmap: Beatmap, loop_ms: int = 10, bezier_precision: int =
             analyse_slider(beatmap, obj, loop_ms, bezier_precision)
 
     # Scan for stacks
-    last_hit_objects: list[HitObject] = []
-    for obj in beatmap.HitObjects[::-1]:
-        if obj.type in ["spinner", "hold"]:  # Spinners and holds do not create stacks
+    # The stacking rules are complex and obscure, so I won't be explaining them. Good luck find them out :)
+    # In case you really want to know, look into "osu!stacks.py" (I don't know if that will help, but you can try)
+    for i in reversed(range(len(beatmap.HitObjects))):  # We iterate through the hit objects in reversed order
+        current = beatmap.HitObjects[i]
+        if isinstance(current, (Spinner, Hold)) or current.stack is not None:  # Those are not part of stacks
+            # Spinners and holds are not part of stacks
+            # If stack is not None, that means the stack offset for this object has already been computed
             continue
-
-        # Delete expired hit objects
-        while len(last_hit_objects) > 0 and last_hit_objects[0].time > obj.time + stack_leniency_time:
-            last_hit_objects.pop(0)
-
-        # Check if obj can be stacked
-        obj.stack = ("none", 0)
-        for o in last_hit_objects[::-1]:
-            if dist(Vector(o.x, o.y), Vector(obj.x, obj.y)) < 2.9:
-                if o.stack[0] == "stack":
-                    obj.stack = ("stack", o.stack[1] + 1)
+        current.stack = 0  # This must be a stack base
+        slider_stack = isinstance(current, Slider)  # Stacks ignore sliders is the first object is itself a slider
+        total_stack = 0
+        for j in reversed(range(i)):  # We try to find the first object that might be stacked on top of current
+            obj = beatmap.HitObjects[j]
+            if isinstance(obj, (Spinner, Hold)): continue
+            if isinstance(obj, Slider):  # Sliders are special because they have an end that could be part of a stack
+                if obj.end.time + stack_leniency_time < current.time:  # Too far in time; the stack stops here
                     break
-                if o.type == "slider" or o.stack[0] == "up":
-                    obj.stack = ("up", o.stack[1] + 1)
+                if dist((current.x, current.y), (obj.end.x, obj.end.y)) < 2.9:
+                    total_stack += 1
+                    current = obj
+                    current.stack = total_stack
+                    if not slider_stack:
+                        # Tail stack: we want the slider to base the base, so we are shifting everything back
+                        current2 = current.end
+                        current.stack = 0  # This slider is now the base of the stack
+                        for k in range(j+1, len(beatmap.HitObjects)):
+                            obj2 = beatmap.HitObjects[k]
+                            if isinstance(obj2, (Spinner, Hold)): continue
+                            if current2.time + stack_leniency_time < obj2.time:  # Too far in time; the stack stops here
+                                break
+                            if dist((current.end.x, current.end.y), (obj2.x, obj2.y)) < 2.9:
+                                current2 = obj2
+                                if current2.stack is None: current2.stack = 0
+                                current2.stack -= total_stack
+                        total_stack = 0
+                        slider_stack = True
+                elif dist((current.x, current.y), (obj.x, obj.y)) < 2.9:
+                    if slider_stack: break  # Sliders break the stack if their head is on it
+                    total_stack += 1
+                    current = obj
+                    current.stack = total_stack
+            else:  # obj is a Circle
+                if obj.time + stack_leniency_time < current.time:  # Too far in time; the stack stops here
                     break
-                if o.type == "circle":
-                    obj.stack = ("stack", 1)
-                    break
-                break
+                if dist((current.x, current.y), (obj.x, obj.y)) < 2.9:
+                    total_stack += 1
+                    current = obj
+                    current.stack = total_stack
 
-        if obj.type == "slider":
-            obj: Slider
-            slider_end = HitObject(
-                obj.end.x,
-                obj.end.y,
-                obj.end.time,
-                1,
-                0
-            )
-            # Check if slider_end can be stacked
-            obj.end.stack = ("none", 0)
-            for o in last_hit_objects[::-1]:
-                if dist(Vector(o.x, o.y), Vector(slider_end.x, slider_end.y)) < 2.9:
-                    if o.stack[0] == "stack":
-                        obj.end.stack = ("down", 0)
-                        break
-                    if o.type == "slider" or o.stack[0] == "up":
-                        obj.stack = ("up", o.stack[1] + 1)
-                        obj.end.stack = ("up", o.stack[1] + 1)
-                        break
-                    if o.type == "circle":
-                        obj.end.stack = ("down", 0)
-                        break
-                    break
-
-        to_append = HitObject(obj.x, obj.y, obj.time, 1, 0)
-        to_append.type = obj.type
-        to_append.stack = obj.stack
-        last_hit_objects.append(to_append)
-
-    # Apply stack values to the positions
-    last_hit_objects: list[HitObject] = []
+    # Apply stacks values
     for obj in beatmap.HitObjects:
-        obj: HitObject
-
-        if obj.type in ["spinner", "hold"]:  # Spinners and hold do not create stacks
-            continue
-
-        # Delete expired hit objects
-        while len(last_hit_objects) > 0 and last_hit_objects[0].time > obj.time + stack_leniency_time:
-            last_hit_objects.pop(0)
-
-        if obj.stack[0] == "stack":
-            # Determine if obj is part of a up or a down stack
-            for o in last_hit_objects:
-                if dist(Vector(o.x, o.y), Vector(obj.x, obj.y)) < 2.9 and o.stack[0] == "down":
-                    obj.stack = ("down", o.stack[1] - 1)
-                    break
-
-            if obj.stack[0] == "stack":  # If obj is not part of a down stack
-                obj.stack = ("up", obj.stack[1])
-
-        if obj.stack[0] == "down":  # Add obj so it can be detected as a down stack
-            to_append = HitObject(obj.x, obj.y, obj.type, 1, 0)
-            to_append.stack = obj.stack
-            last_hit_objects.append(to_append)
-
-        if obj.type == "slider" and obj.end.stack[0] == "down":  # Same but for slider ends
-            obj: Slider
-            to_append = HitObject(
-                obj.end.x,
-                obj.end.y,
-                obj.end.time,
-                1,
-                0
-            )
-            to_append.stack = obj.end.stack
-            last_hit_objects.append(to_append)
-
-        obj.pos += obj.stack[1] * stacked
-        if obj.type == "slider":  # Sliders have more data to modify
-            obj: Slider
-            obj.tail.pos += obj.stack[1] * stacked
-            obj.end.pos += obj.stack[1] * stacked
-
-            for time, point in obj.path.items():
-                obj.path[time] = point + obj.stack[1] * stacked
-
+        if obj.stack is None: continue
+        stack_offset = obj.stack * stack_offset_unit
+        obj.pos += stack_offset
+        if isinstance(obj, Slider):  # Sliders have more data to modify than regular Circles
+            obj.tail.pos += stack_offset
+            obj.end.pos += stack_offset
+            for time in obj.path:
+                obj.path[time] += stack_offset
             for tick in obj.ticksPos:
-                tick.pos += obj.stack[1] * stacked
+                tick.pos += stack_offset

@@ -58,7 +58,6 @@ class SliderAdditionalPoint:
     y: int = None
     pos: Vector = None
     time: float = None
-    stack: int = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
