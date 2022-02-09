@@ -56,35 +56,6 @@ EVENT_ORIGIN_INT_TO_STR = {
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def get_event_type_str(event_type: Union[int, str]) -> str:
-    return EVENT_TYPE_INT_TO_STR[event_type] if isinstance(event_type, int) else event_type
-
-
-def get_event_class(event_type: Union[int, str]) -> type:
-    event_type = get_event_type_str(event_type)
-    if event_type == "Image":           return Image
-    if event_type == "Video":           return Video
-    if event_type == "Break":           return Break
-    if event_type == "BackgroundColor": return BackgroundColor
-    if event_type == "Sprite":          return Sprite
-    if event_type == "Sample":          return Sample
-    if event_type == "Animation":       return Animation
-
-
-def get_command_class_and_arg_count(command: str) -> tuple[type, int]:
-    if command == "F":  return Fade, 2
-    if command == "M":  return Move, 4
-    if command == "MX": return MoveX, 2
-    if command == "MY": return MoveY, 2
-    if command == "S":  return Scale, 2
-    if command == "V":  return VectorScale, 4
-    if command == "R":  return Rotate, 2
-    if command == "C":  return Color, 6
-    if command == "P":  return Parameter, 1
-    if command == "L":  return Loop, 2
-    if command == "T":  return Trigger, 3
-
-
 # ----------------------------------------------------------------------------------------------------------------------
 # Event dataclasses
 # Their properties use lowerCamelCase
@@ -98,6 +69,18 @@ class Event:
     def __post_init__(self):
         if isinstance(self.type, int):
             self.type = EVENT_TYPE_INT_TO_STR[self.type]
+
+    @classmethod
+    def from_params(cls, *args):
+        event_type = EVENT_TYPE_INT_TO_STR[args[0]] if isinstance(args[0], int) else args[0]
+        if event_type == "Image":           return Image(*args)
+        if event_type == "Video":           return Video(*args)
+        if event_type == "Break":           return Break(*args)
+        if event_type == "BackgroundColor": return BackgroundColor(*args)
+        if event_type == "Sprite":          return Sprite(*args)
+        if event_type == "Sample":          return Sample(*args)
+        if event_type == "Animation":       return Animation(*args)
+        raise ValueError(f"Unknown event type '{event_type}'")
 
     def type_int(self) -> int:
         return EVENT_TYPE_STR_TO_INT[self.type]
@@ -234,6 +217,22 @@ class BaseCommand:
     indentation: int
     event: str
 
+    @classmethod
+    def from_params(cls, *args):
+        cmd = args[1]
+        if cmd == "F":  return Fade(*args)
+        if cmd == "M":  return Move(*args)
+        if cmd == "MX": return MoveX(*args)
+        if cmd == "MY": return MoveY(*args)
+        if cmd == "S":  return Scale(*args)
+        if cmd == "V":  return VectorScale(*args)
+        if cmd == "R":  return Rotate(*args)
+        if cmd == "C":  return Color(*args)
+        if cmd == "P":  return Parameter(*args)
+        if cmd == "L":  return Loop(*args)
+        if cmd == "T":  return Trigger(*args)
+        raise ValueError(f"Unknown command '{cmd}'")
+
     def cmd(self) -> str:
         return (" " * self.indentation) + self.event
 
@@ -351,11 +350,11 @@ class Parameter(SpriteCommand):
 class Loop(BaseCommand):
     startTime: int = 0
     loopCount: int = 0
-    loopCommands: list = None
+    commands: list = None
 
     def __post_init__(self):
-        if self.loopCommands is None:
-            self.loopCommands = []
+        if self.commands is None:
+            self.commands = []
 
     def osu_format(self) -> str:
         return f"{self.cmd()},{self.startTime},{self.loopCount}"
@@ -366,11 +365,11 @@ class Trigger(BaseCommand):
     triggerType: str
     startTime: int = 0
     endTime: int = 0
-    triggerCommands: list = None
+    commands: list = None
 
     def __post_init__(self):
-        if self.triggerCommands is None:
-            self.triggerCommands = []
+        if self.commands is None:
+            self.commands = []
 
     def osu_format(self) -> str:
         return f"{self.cmd()},{self.triggerType},{self.startTime},{self.endTime}"

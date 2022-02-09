@@ -1,81 +1,8 @@
-from .beatmap_classes import *
-from .storyboard_classes import *
+from .beatmap_classes import Beatmap, TimingPoint, HitObject,  \
+    GeneralSettings, EditorSettings, MetadataSettings, DifficultySettings, ColorSettings
+from .storyboard_decompressor import get_events
 from ..helpers import osu_fp, complete_path, split_get
 from re import match, findall
-
-def get_commands(command: str) -> list[BaseCommand]:
-    """ Extract of code from previous version:
-        if section == "[Events]":
-            if line.startswith(" ") or line.startswith("_"):  # Storyboard command
-                if not isinstance(events[-1], (Image, Video, Sprite, Animation)):
-                    raise BeatmapError("command assigned to an event that doesn't support commands")
-
-                cmd = get_commands(line)
-                indentation = cmd[0].indentation
-                target_list = events[-1].commands
-
-                while len(target_list) > 0 and target_list[-1].indentation > indentation:
-                    if isinstance(target_list[-1], Loop):
-                        target_list = target_list[-1].loopCommands
-                        continue
-
-                    if isinstance(target_list[-1], Trigger):
-                        target_list = target_list[-1].triggerCommands
-                        continue
-
-                    break
-
-                target_list.extend(cmd)
-                continue
-
-            event_type, *params = split_get(line, ",", [[int, str]])
-            events.append(
-                get_event_class(event_type)(event_type, *params)
-            )
-            continue
-    """
-
-    cmd, *data = split_get(command, ",", [str, [int, float, str]])
-    indent, event = cmd.replace(" ", "_").count("_"), cmd.replace("_", " ").strip()
-
-    if event == "L":  # Loop
-        start_time, loop_count = data
-        return [
-            Loop( indent, event, start_time, loop_count )
-        ]
-
-    if event == "T":  # Trigger
-        trigger_type, start_time, end_time = data
-        return [
-            Trigger( indent, event, trigger_type, start_time, end_time )
-        ]
-
-    cmd_class, arg_count = get_command_class_and_arg_count(event)
-    arg_count_halved = (arg_count + 1) // 2
-    easing, start_time, end_time, *params = data
-
-    # This adds empty values so the length of params is divisible by arg_count
-    params += [""] * ( arg_count_halved - (len(params) % arg_count_halved) )
-
-    if end_time == "":
-        end_time = start_time
-    for i, param in enumerate(params):
-        if param == "":
-            params[i] = params[i-1]
-
-    organised_params = [params[i:i+arg_count] for i in range(0, len(params) - arg_count_halved, arg_count_halved)]
-    duration = end_time - start_time
-
-    return [
-        cmd_class(
-            indent,
-            event,
-            easing,
-            start_time + i*duration,
-            end_time + i*duration,
-            *p)
-        for i, p in enumerate(organised_params)
-    ]
 
 
 def decompress_beatmap(path: str) -> Beatmap:
@@ -109,9 +36,7 @@ def decompress_beatmap(path: str) -> Beatmap:
         for line in sections.get("Difficulty", [])
         for key, value in [ split_get(line, ":", [str, float]) ]
     }
-    events = [
-        ...  # TODO: handle events
-    ]
+    events = get_events(sections.get("Events", []))
     timing_points = [
         TimingPoint( *split_get(line, ",", [[int, float]]) )
         for line in sections.get("TimingPoints", [])
@@ -138,7 +63,3 @@ def decompress_beatmap(path: str) -> Beatmap:
         HitObjects=hit_objects,
         Path=path
     )
-
-
-class BeatmapError(Exception):
-    pass

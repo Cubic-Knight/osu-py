@@ -1,5 +1,5 @@
-from .beatmap_classes import *
-from .storyboard_classes import *
+from .beatmap_classes import Beatmap
+from .storyboard_classes import SpriteCommand, Loop, Trigger
 from ..helpers import osu_fp, complete_path
 from typing import Union
 
@@ -7,16 +7,9 @@ from typing import Union
 def format_sprite_command(cmd: Union[SpriteCommand, Loop, Trigger]) -> str:
     if isinstance(cmd, SpriteCommand):
         return cmd.osu_format()
-
-    if isinstance(cmd, Loop):
-        return "\n".join(
-            [cmd.osu_format()] + [format_sprite_command(sub_cmd) for sub_cmd in cmd.loopCommands]
-        )
-
-    if isinstance(cmd, Trigger):
-        return "\n".join(
-            [cmd.osu_format()] + [format_sprite_command(sub_cmd) for sub_cmd in cmd.triggerCommands]
-        )
+    return "\n".join(
+        [cmd.osu_format()] + [format_sprite_command(sub_cmd) for sub_cmd in cmd.commands]
+    )
 
 
 def compress_beatmap(beatmap: Beatmap, output_path=None) -> str:

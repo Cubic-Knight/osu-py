@@ -13,7 +13,7 @@ def apply_first_correct_function(s: str, funcs: tuple, default: Any = ...):
 
 
 def split_get(s: str, sep: str, obj_funcs: list, defaults: list = None,
-              max_split: int = -1, no_strip: bool = False, min_len: int = 0, max_len: int = 100):
+              max_split: int = -1, no_strip: bool = False, min_len: int = 0, max_len: int = 100) -> list:
     """
     Like str.split(), but can map specific functions on the results
     :param s: The string to split

@@ -13,7 +13,6 @@ __all__ = [
     'Beatmap', 'Replay', 'ReplayFrame',
     'BeatmapError',
 
-    'get_event_class',
     'decompress_replay', 'compress_replay',
     'decompress_beatmap', 'compress_beatmap',
     'analyse_slider', 'analyse_beatmap',
