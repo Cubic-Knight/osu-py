@@ -1,10 +1,8 @@
-from .slider_analyser import analyse_slider
-from .beatmap_analyser import analyse_beatmap
 from .conversions import *
 from .constants import *
 
+
 __all__ = [
-    'analyse_slider', 'analyse_beatmap',
     'ar_to_ms', 'ms_to_ar',
     'od_to_win300', 'od_to_win100', 'od_to_win50', 'win300_to_od', 'win100_to_od', 'win50_to_od',
     'cs_to_radius', 'radius_to_cs',
